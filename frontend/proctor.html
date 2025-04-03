@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proctor Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f4f4f4;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    #activeStudents {
+      margin: 20px 0;
+      padding: 10px;
+      background-color: #fff;
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+    #activeStudents h2 {
+      color: #555;
+    }
+    #studentList {
+      list-style: none;
+      padding: 0;
+    }
+    #studentList li {
+      padding: 5px 0;
+      font-weight: bold;
+    }
+    .student-logs {
+      margin: 10px 0;
+      padding: 10px;
+      background-color: #fff;
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+    .student-logs h3 {
+      margin: 0 0 10px 0;
+      color: #333;
+    }
+    .student-logs ul {
+      list-style: none;
+      padding: 0;
+    }
+    .student-logs li {
+      padding: 5px 0;
+      color: #666;
+    }
+    .alert {
+      color: #d32f2f;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Proctor Dashboard</h1>
+  <div id="activeStudents">
+    <h2>Active Students</h2>
+    <ul id="studentList"></ul>
+  </div>
+  <div id="logsContainer"></div>
+  <script type="module">
+    import { ExamProctor } from "../declarations/ExamProctor/index.js";
+
+    // Function to update the dashboard
+    async function updateDashboard() {
+      // Get active students
+      const activeStudents = await ExamProctor.getActiveStudents();
+      const studentList = document.getElementById("studentList");
+      studentList.innerHTML = "";
+      activeStudents.forEach(student => {
+        const li = document.createElement("li");
+        li.textContent = student;
+        studentList.appendChild(li);
+      });
+
+      // Get all logs
+      const allLogs = await ExamProctor.getAllLogs();
+      const logsContainer = document.getElementById("logsContainer");
+      logsContainer.innerHTML = "";
+      allLogs.forEach(session => {
+        const studentId = session[0];
+        const logs = session[1];
+        const div = document.createElement("div");
+        div.className = "student-logs";
+        div.innerHTML = `<h3>Logs for ${studentId}</h3>`;
+        const ul = document.createElement("ul");
+        logs.forEach(log => {
+          const li = document.createElement("li");
+          const timestamp = new Date(parseInt(log[0]) * 1000).toLocaleString();
+          li.textContent = `[${timestamp}] ${log[1]}`;
+          if (log[1].includes("Tab switched") || log[1].includes("Face not detected") || log[1].includes("Multiple faces")) {
+            li.className = "alert";
+          }
+          ul.appendChild(li);
+        });
+        div.appendChild(ul);
+        logsContainer.appendChild(div);
+      });
+    }
+
+    // Update the dashboard every 5 seconds
+    setInterval(updateDashboard, 5000);
+
+    // Initial update
+    updateDashboard();
+  </script>
+</body>
+</html>

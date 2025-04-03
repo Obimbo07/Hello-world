@@ -37,7 +37,11 @@ actor ExamProctor {
       case (?session) { session.1 };
     };
   };
-
+  
+  public query func getActiveStudents() : async [Text] {
+    activeStudents
+  };
+  
   // End the session for a student
   public func endSession(studentId : Text) : async () {
     activeStudents := Array.filter<Text>(activeStudents, func (id) { id != studentId });

@@ -5,27 +5,84 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Exam Proctoring System</title>
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; }
-    video { width: 300px; height: 200px; border: 1px solid black; }
-    #logs { margin-top: 20px; }
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #f4f4f4;
+      margin: 20px;
+    }
+    h1 {
+      color: #333;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #fff;
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+    input, button {
+      padding: 10px;
+      margin: 5px;
+      border-radius: 3px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    video {
+      width: 300px;
+      height: 200px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      margin: 10px 0;
+    }
+    #logs {
+      margin-top: 20px;
+      text-align: left;
+    }
+    #logs h3 {
+      color: #555;
+    }
+    #logList {
+      list-style: none;
+      padding: 0;
+    }
+    #logList li {
+      padding: 5px 0;
+      color: #666;
+    }
+    .alert {
+      color: #d32f2f;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
-  <h1>Exam Proctoring System</h1>
-  <input type="text" id="studentId" placeholder="Enter Student ID">
-  <button onclick="startSession()">Start Exam</button>
-  <button onclick="endSession()">End Exam</button>
-  <div>
-    <h3>Webcam Feed</h3>
-    <video id="webcam" autoplay></video>
-  </div>
-  <div id="logs">
-    <h3>Proctor Logs</h3>
-    <ul id="logList"></ul>
+  <div class="container">
+    <h1>Exam Proctoring System</h1>
+    <input type="text" id="studentId" placeholder="Enter Student ID">
+    <button onclick="startSession()">Start Exam</button>
+    <button onclick="endSession()">End Exam</button>
+    <div>
+      <h3>Webcam Feed</h3>
+      <video id="webcam" autoplay></video>
+    </div>
+    <div id="logs">
+      <h3>Activity Logs</h3>
+      <ul id="logList"></ul>
+    </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/opencv.js@1.2.1/opencv.js" onload="onOpenCvReady()" async></script>
   <script type="module">
-    import { ExamProctor } from "../declarations";
+    import { ExamProctor } from "../declarations/ExamProctor/index.js";
 
     let studentId = "";
     let video = null;
@@ -84,7 +141,11 @@
       logList.innerHTML = "";
       logs.forEach(log => {
         const li = document.createElement("li");
-        li.textContent = log;
+        const timestamp = new Date(parseInt(log[0]) * 1000).toLocaleString();
+        li.textContent = `[${timestamp}] ${log[1]}`;
+        if (log[1].includes("Tab switched") || log[1].includes("Face not detected") || log[1].includes("Multiple faces")) {
+          li.className = "alert";
+        }
         logList.appendChild(li);
       });
     }
