@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exam Proctoring System</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; }
+    video { width: 300px; height: 200px; border: 1px solid black; }
+    #logs { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Exam Proctoring System</h1>
+  <input type="text" id="studentId" placeholder="Enter Student ID">
+  <button onclick="startSession()">Start Exam</button>
+  <button onclick="endSession()">End Exam</button>
+  <div>
+    <h3>Webcam Feed</h3>
+    <video id="webcam" autoplay></video>
+  </div>
+  <div id="logs">
+    <h3>Proctor Logs</h3>
+    <ul id="logList"></ul>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/opencv.js@1.2.1/opencv.js" onload="onOpenCvReady()" async></script>
+  <script type="module">
+    import { ExamProctor } from "../declarations";
+
+    let studentId = "";
+    let video = null;
+    let stream = null;
+
+    // Start the exam session
+    window.startSession = async () => {
+      studentId = document.getElementById("studentId").value;
+      if (!studentId) {
+        alert("Please enter a student ID");
+        return;
+      }
+      await ExamProctor.startSession(studentId);
+      alert("Session started for " + studentId);
+      startMonitoring();
+    };
+
+    // End the exam session
+    window.endSession = async () => {
+      await ExamProctor.endSession(studentId);
+      alert("Session ended for " + studentId);
+      stopMonitoring();
+    };
+
+    // Start monitoring browser and webcam
+    function startMonitoring() {
+      // Browser activity monitoring
+      window.addEventListener("blur", async () => {
+        await ExamProctor.logEvent(studentId, "Tab switched");
+        updateLogs();
+      });
+
+      // Webcam monitoring
+      video = document.getElementById("webcam");
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(s => {
+          stream = s;
+          video.srcObject = stream;
+          setInterval(detectFace, 5000); // Check every 5 seconds
+        })
+        .catch(err => console.error("Webcam error:", err));
+    }
+
+    // Stop monitoring
+    function stopMonitoring() {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+      window.removeEventListener("blur", () => {});
+    }
+
+    // Update logs on the UI
+    async function updateLogs() {
+      const logs = await ExamProctor.getLogs(studentId);
+      const logList = document.getElementById("logList");
+      logList.innerHTML = "";
+      logs.forEach(log => {
+        const li = document.createElement("li");
+        li.textContent = log;
+        logList.appendChild(li);
+      });
+    }
+
+    // Face detection using OpenCV.js
+    window.onOpenCvReady = () => {
+      console.log("OpenCV.js is ready");
+    };
+
+    async function detectFace() {
+      if (!video) return;
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0);
+      const src = cv.imread(canvas);
+      const gray = new cv.Mat();
+      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+      const faces = new cv.RectVector();
+      const classifier = new cv.CascadeClassifier();
+      classifier.load("haarcascade_frontalface_default.xml");
+      classifier.detectMultiScale(gray, faces);
+      const faceCount = faces.size();
+      src.delete(); gray.delete(); faces.delete(); classifier.delete();
+      if (faceCount === 0) {
+        await ExamProctor.logEvent(studentId, "Face not detected");
+      } else if (faceCount > 1) {
+        await ExamProctor.logEvent(studentId, "Multiple faces detected");
+      }
+      updateLogs();
+    };
+  </script>
+</body>
+</html>
